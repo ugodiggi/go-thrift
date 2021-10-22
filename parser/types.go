@@ -11,12 +11,19 @@ type Pos struct {
 	Col  int
 }
 
+type TemplateInstance struct {
+	TemplateName string  `json:",omitempty"`
+	TypeArgs     []*Type `json:",omitempty"`
+}
+
 type Type struct {
 	Pos         Pos
 	Name        string        `json:",omitempty"`
 	KeyType     *Type         `json:",omitempty"` // If map
 	ValueType   *Type         `json:",omitempty"` // If map, list, or set
 	Annotations []*Annotation `json:",omitempty"`
+
+	TemplateInstance *TemplateInstance `json:",omitempty"` // If template instance
 }
 
 type Typedef struct {
@@ -70,6 +77,12 @@ type Struct struct {
 	Annotations []*Annotation `json:",omitempty"`
 }
 
+type TemplateDef struct {
+	Struct
+
+	TypeArgNames []string `json:",omitempty"`
+}
+
 type Method struct {
 	Pos         Pos
 	Comment     string
@@ -91,17 +104,18 @@ type Service struct {
 }
 
 type Thrift struct {
-	Filename   string
-	Includes   map[string]string    `json:",omitempty"` // name -> unique identifier (absolute path generally)
-	Imports    map[string]*Thrift   `json:",omitempty"` // name -> imported file
-	Typedefs   map[string]*Typedef  `json:",omitempty"`
-	Namespaces map[string]string    `json:",omitempty"`
-	Constants  map[string]*Constant `json:",omitempty"`
-	Enums      map[string]*Enum     `json:",omitempty"`
-	Structs    map[string]*Struct   `json:",omitempty"`
-	Exceptions map[string]*Struct   `json:",omitempty"`
-	Unions     map[string]*Struct   `json:",omitempty"`
-	Services   map[string]*Service  `json:",omitempty"`
+	Filename     string
+	Includes     map[string]string       `json:",omitempty"` // name -> unique identifier (absolute path generally)
+	Imports      map[string]*Thrift      `json:",omitempty"` // name -> imported file
+	Typedefs     map[string]*Typedef     `json:",omitempty"`
+	Namespaces   map[string]string       `json:",omitempty"`
+	Constants    map[string]*Constant    `json:",omitempty"`
+	Enums        map[string]*Enum        `json:",omitempty"`
+	Structs      map[string]*Struct      `json:",omitempty"`
+	Exceptions   map[string]*Struct      `json:",omitempty"`
+	Unions       map[string]*Struct      `json:",omitempty"`
+	TemplateDefs map[string]*TemplateDef `json:",omitempty"`
+	Services     map[string]*Service     `json:",omitempty"`
 }
 
 type Identifier string

@@ -18,6 +18,8 @@ var inTests = false
 
 type exception *Struct
 
+type templateDef *TemplateDef
+
 type union *Struct
 
 type include string
@@ -128,6 +130,7 @@ Grammar ← _ statements:( Statement )* __ (EOF / SyntaxError) {
 		Structs: make(map[string]*Struct),
 		Exceptions: make(map[string]*Struct),
 		Unions: make(map[string]*Struct),
+		TemplateDefs: make(map[string]*TemplateDef),
 		Services: make(map[string]*Service),
 	}
 	stmts := toIfaceSlice(statements)
@@ -147,6 +150,8 @@ Grammar ← _ statements:( Statement )* __ (EOF / SyntaxError) {
 			thrift.Exceptions[v.Name] = (*Struct)(v)
 		case union:
 			thrift.Unions[v.Name] = unionToStruct(v)
+		case templateDef:
+			thrift.TemplateDefs[v.Name] = (*TemplateDef)(v)
 		case *Service:
 			thrift.Services[v.Name] = v
 		case include:
@@ -170,7 +175,7 @@ Include ← blockComment:(_ Comment? EOL)* _ "include" _ file:Literal (Whitespac
 	return include(file.(string)), nil
 }
 
-Statement ← Include / Namespace / Const / Enum / TypeDef / Struct / Exception / Union / Service
+Statement ← Include / Namespace / Const / Enum / TypeDef / TemplateDef / Struct / Exception / Union / Service
 
 Namespace ← blockComment:(_ Comment? EOL)* _ "namespace" _ scope:[*a-z.-]+ _ ns:Identifier (Whitespace / EOL)* {
 	return &namespace{
@@ -271,6 +276,17 @@ Struct ← blockComment:(_ Comment? EOL)* _ "struct" _ st:StructLike {
         return stc, nil
 }
 
+TemplateDef ← blockComment:(_ Comment? EOL)* _ "template" _ st:TemplateDefBody {
+	td := st.(*TemplateDef)
+	if blockComment != nil {
+		bc := ifaceSliceToBlockComment(blockComment)
+		if bc != "" {
+			td.Comment = bc
+		}
+	}
+	return templateDef(td), nil
+}
+
 Exception ← blockComment:(_ Comment? EOL)* _ "exception" _ st:StructLike {
         stc := st.(*Struct)
         if blockComment != nil {
@@ -303,6 +319,30 @@ StructLike ← name:Identifier __ '{' (Whitespace / EOL)* fields:FieldList __'}'
 		st.Fields = fields.([]*Field)
 	}
 	return st, nil
+}
+
+TemplateDefBody ← name:Identifier __ "<" args:TemplateDefArgs ">" __ '{' (Whitespace / EOL)* fields:FieldList __'}' _ annotations:TypeAnnotations? ListSeparator? (Whitespace / EOL)* {
+	st := &TemplateDef{
+		Struct {
+			Pos: makePos(c.pos),
+			Name: string(name.(Identifier)),
+			Annotations: toAnnotations(annotations),
+		},
+		args.([]string),
+	}
+	if fields != nil {
+		st.Fields = fields.([]*Field)
+	}
+	return st, nil
+}
+
+TemplateDefArgs ← arg0:(__ Identifier __) args:("," __ Identifier __)* {
+	names := make([]string, len(args.([]interface{})) + 1)
+	names[0] = string(arg0.([]interface{})[1].(Identifier))
+	for i, arg := range args.([]interface{}) {
+		names[i + 1] = string(arg.([]interface{})[2].(Identifier))
+	}
+	return names, nil
 }
 
 FieldList ← fields:(Field (Whitespace / EOL)*)* {
@@ -419,7 +459,7 @@ Throws ← "throws" __ '(' __ exceptions:FieldList ')' {
 	return exceptions, nil
 }
 
-FieldType ← typ:(BaseType / ContainerType / Identifier) {
+FieldType ← typ:(BaseType / ContainerType / TemplateInstance / Identifier) {
 	if t, ok := typ.(Identifier); ok {
 		return &Type{
 			Pos: makePos(c.pos),
@@ -479,6 +519,28 @@ ListType ← "list" WS "<" WS typ:FieldType WS ">" _ annotations:TypeAnnotations
 
 CppType ← "cpp_type" cppType:Literal {
 	return cppType, nil
+}
+
+TemplateInstance ← name:Identifier WS "<" args:TemplateInstanceArgs ">" _ annotations:TypeAnnotations? {
+	ti := &TemplateInstance{
+		TemplateName: (string)(name.(Identifier)),
+		TypeArgs: args.([]*Type),
+	}
+	return &Type{
+		Pos: makePos(c.pos),
+		Name: tmplInstanceName(ti),
+		Annotations: toAnnotations(annotations),
+		TemplateInstance: ti,
+	}, nil
+}
+
+TemplateInstanceArgs ← arg0:(WS FieldType WS) args:("," WS FieldType WS)* {
+	types := make([]*Type, len(args.([]interface{})) + 1)
+	types[0] = arg0.([]interface{})[1].(*Type)
+	for i, arg := range args.([]interface{}) {
+		types[i + 1] = arg.([]interface{})[2].(*Type)
+	}
+	return types, nil
 }
 
 ConstValue ← Literal / DoubleConstant / IntConstant / ConstMap / ConstList / Identifier
