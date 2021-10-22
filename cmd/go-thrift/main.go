@@ -26,7 +26,12 @@ func camelCase(st string) string {
 	if strings.ToUpper(st) == st {
 		st = strings.ToLower(st)
 	}
-	return thrift.CamelCase(st)
+	// preserve double underscore.
+	pieces := strings.Split(st, "__")
+	for i := range pieces {
+		pieces[i] = thrift.CamelCase(pieces[i])
+	}
+	return strings.Join(pieces, "__")
 }
 
 func lowerCamelCase(st string) string {
