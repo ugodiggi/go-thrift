@@ -49,7 +49,7 @@ func (p *Parser) Parse(r io.Reader, opts ...Option) (*Thrift, error) {
 	return t, nil
 }
 
-func (p *Parser) ParseFile(filename string) (map[string]*Thrift, string, error) {
+func (p *Parser) ParseFile(filename string, opts ...Option) (map[string]*Thrift, string, error) {
 	absPath, err := p.abs("", filename)
 	if err != nil {
 		return nil, "", err
@@ -64,7 +64,7 @@ func (p *Parser) ParseFile(filename string) (map[string]*Thrift, string, error) 
 		if err != nil {
 			return nil, "", err
 		}
-		thrift, err := p.Parse(rd)
+		thrift, err := p.Parse(rd, opts...)
 		rd.Close()
 		if err != nil {
 			return nil, "", err

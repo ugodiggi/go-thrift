@@ -17,6 +17,11 @@ import (
 	"github.com/alecthomas/go-thrift/thrift"
 )
 
+var (
+	flagParserDebug = flag.Bool("parser.debug", false, "Print extensive debug messages from the parser.")
+	flagDebug       = flag.Bool("debug", false, "debug the program flow.")
+)
+
 func camelCase(st string) string {
 	if strings.ToUpper(st) == st {
 		st = strings.ToLower(st)
@@ -80,11 +85,21 @@ func main() {
 	outpath := flag.Arg(1)
 
 	p := parser.New()
-	parsedThrift, _, err := p.ParseFile(filename)
+	parsedThrift, _, err := p.ParseFile(filename, parser.Debug(*flagParserDebug))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 		os.Exit(2)
+	} else if *flagDebug {
+		fmt.Fprintln(os.Stderr, "p.ParseFile(...) succeeded")
 	}
+	pp, err := p.RenderTemplates()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+		os.Exit(2)
+	} else if *flagDebug {
+		fmt.Fprintln(os.Stderr, "p.RenderTemplates() succeeded")
+	}
+	parsedThrift = pp.Files
 
 	generator := &GoGenerator{
 		ThriftFiles: parsedThrift,
@@ -95,5 +110,7 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 		os.Exit(2)
+	} else if *flagDebug {
+		fmt.Fprintln(os.Stderr, "generator.Generate(...) succeeded")
 	}
 }
