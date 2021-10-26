@@ -19,7 +19,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/alecthomas/go-thrift/parser"
+	"github.com/ugodiggi/go-thrift/parser"
 )
 
 var (
