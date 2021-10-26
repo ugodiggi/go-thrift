@@ -1,6 +1,6 @@
 module github.com/ugodiggi/go-thrift
 
-go 1.16
+go 1.15
 
 require (
 	github.com/go-delve/delve v1.7.2 // indirect
