@@ -1,6 +1,8 @@
 Thrift Package for Go
 =====================
 
+**DO NOT USE THIS! THIS IS AN EXPERIMENTAL FORK.**
+
 [![Build Status](https://travis-ci.org/samuel/go-thrift.png)](https://travis-ci.org/samuel/go-thrift)
 
 API Documentation: <http://godoc.org/github.com/samuel/go-thrift>
@@ -74,7 +76,7 @@ languages.
 
 How to use the generator:
 
-    $ go install github.com/alecthomas/go-thrift/cmd/go-thrift
+    $ go install github.com/ugodiggi/go-thrift/cmd/go-thrift
 
     $ go-thrift --help
     Usage of generator:

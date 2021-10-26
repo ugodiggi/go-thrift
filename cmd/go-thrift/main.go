@@ -13,8 +13,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/alecthomas/go-thrift/parser"
-	"github.com/alecthomas/go-thrift/thrift"
+	"github.com/ugodiggi/go-thrift/parser"
+	"github.com/ugodiggi/go-thrift/thrift"
 )
 
 var (
