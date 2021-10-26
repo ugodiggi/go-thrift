@@ -435,6 +435,13 @@ func (e *%s) UnmarshalJSON(b []byte) error {
 func (g *GoGenerator) writeStruct(out io.Writer, st *parser.Struct) error {
 	structName := camelCase(st.Name)
 
+	if len(st.Comment) > 0 {
+		pieces := strings.Split(st.Comment, "\n")
+		for _, p := range pieces {
+			g.write(out, "// ")
+			g.write(out, p)
+		}
+	}
 	g.write(out, "\ntype %s struct {\n", structName)
 	for _, field := range st.Fields {
 		g.write(out, "\t%s\n", g.formatField(field))
