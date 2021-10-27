@@ -45,14 +45,20 @@ func tmplResolveArgs(typeArgNames []string, typeArgs []*Type, fields []*Field) (
 func (p *Parser) RenderTemplates() (*Parser, error) {
 	// Find all template instances.
 	instances := make(map[string]*TemplateInstance)
+	collectType := func(t *Type) {
+		if t == nil {
+			return
+		}
+		if ti := t.TemplateInstance; ti != nil {
+			name := tmplInstanceName(ti)
+			if _, ok := instances[name]; !ok {
+				instances[name] = ti
+			}
+		}
+	}
 	collect := func(s *Struct) {
 		for _, f := range s.Fields {
-			if ti := f.Type.TemplateInstance; ti != nil {
-				name := tmplInstanceName(ti)
-				if _, ok := instances[name]; !ok {
-					instances[name] = ti
-				}
-			}
+			collectType(f.Type)
 		}
 	}
 	for _, f := range p.Files {
@@ -64,6 +70,17 @@ func (p *Parser) RenderTemplates() (*Parser, error) {
 		}
 		for _, s := range f.Unions {
 			collect(s)
+		}
+		for _, s := range f.Services {
+			for _, m := range s.Methods {
+				collectType(m.ReturnType)
+				for _, arg := range m.Arguments {
+					collectType(arg.Type)
+				}
+				for _, exc := range m.Exceptions {
+					collectType(exc.Type)
+				}
+			}
 		}
 	}
 
