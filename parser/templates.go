@@ -22,6 +22,19 @@ func tmplResolveArgs(typeArgNames []string, typeArgs []*Type, fields []*Field) (
 		tas[n] = typeArgs[i]
 	}
 
+	var resolveType func(*Type) *Type
+	resolveType = func(t *Type) *Type {
+		if t == nil {
+			return t
+		}
+		if tt, ok := tas[t.Name]; ok {
+			return tt
+		}
+		t.KeyType = resolveType(t.KeyType)
+		t.ValueType = resolveType(t.ValueType)
+		return t
+	}
+
 	result := []*Field{}
 	for _, f := range fields {
 		ff := &Field{
@@ -30,12 +43,9 @@ func tmplResolveArgs(typeArgNames []string, typeArgs []*Type, fields []*Field) (
 			ID:          f.ID,
 			Name:        f.Name,
 			Optional:    f.Optional,
-			Type:        f.Type,
+			Type:        resolveType(f.Type),
 			Default:     f.Default,
 			Annotations: f.Annotations,
-		}
-		if ta, ok := tas[ff.Type.Name]; ok {
-			ff.Type = ta
 		}
 		result = append(result, ff)
 	}
@@ -45,7 +55,8 @@ func tmplResolveArgs(typeArgNames []string, typeArgs []*Type, fields []*Field) (
 func (p *Parser) RenderTemplates() (*Parser, error) {
 	// Find all template instances.
 	instances := make(map[string]*TemplateInstance)
-	collectType := func(t *Type) {
+	var collectType func(t *Type)
+	collectType = func(t *Type) {
 		if t == nil {
 			return
 		}
@@ -55,6 +66,8 @@ func (p *Parser) RenderTemplates() (*Parser, error) {
 				instances[name] = ti
 			}
 		}
+		collectType(t.KeyType)
+		collectType(t.ValueType)
 	}
 	collect := func(s *Struct) {
 		for _, f := range s.Fields {
@@ -82,6 +95,10 @@ func (p *Parser) RenderTemplates() (*Parser, error) {
 				}
 			}
 		}
+		// TODO(ugo):
+		// f.Constants
+		// f.Enums
+		// f.Typedefs
 	}
 
 	instancesLeft := []*TemplateInstance{}
