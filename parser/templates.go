@@ -1,6 +1,8 @@
 package parser
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func tmplInstanceName(ti *TemplateInstance) string {
 	name := ti.TemplateName + "__"
@@ -123,7 +125,7 @@ func (p *Parser) RenderTemplates() (*Parser, error) {
 			name := tmplInstanceName(ti)
 			fields, err := tmplResolveArgs(tDef.TypeArgNames, ti.TypeArgs, tDef.Fields)
 			if err != nil {
-				return nil, err
+				return nil, errorForTemplateName(ti.TemplateName, err)
 			}
 			f.Structs[name] = &Struct{
 				Pos:         tDef.Pos,
@@ -143,4 +145,8 @@ func (p *Parser) RenderTemplates() (*Parser, error) {
 		Filesystem: p.Filesystem,
 		Files:      p.Files,
 	}, nil
+}
+
+func errorForTemplateName(name string, e error) error {
+	return fmt.Errorf("%s: %s", name, e)
 }
