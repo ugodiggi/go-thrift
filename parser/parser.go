@@ -49,14 +49,20 @@ func (p *Parser) Parse(r io.Reader, opts ...Option) (*Thrift, error) {
 	return t, nil
 }
 
+// ParseFile parses a thrift file *and all the included thrift files*.
+// Produces in output a map[full path name]=>parsed Thrift struct which includes all the
+// thrift files that have been parsed so far.
+// The parser memoizes the result of the parsing, so each thrift file is actually parsed only once.
 func (p *Parser) ParseFile(filename string, opts ...Option) (map[string]*Thrift, string, error) {
 	absPath, err := p.abs("", filename)
 	if err != nil {
 		return nil, "", err
 	}
 
-	path := absPath
-	for path != "" {
+	pathsToParse := []string{absPath}
+	for len(pathsToParse) > 0 {
+		path := pathsToParse[len(pathsToParse)-1]
+		pathsToParse = pathsToParse[:len(pathsToParse)-1]
 		if _, ok := p.Files[path]; ok {
 			break
 		}
@@ -73,21 +79,13 @@ func (p *Parser) ParseFile(filename string, opts ...Option) (map[string]*Thrift,
 
 		basePath := filepath.Dir(path)
 		for incName, incPath := range thrift.Includes {
-			p, err := p.abs(basePath, incPath)
+			includePath, err := p.abs(basePath, incPath)
 			if err != nil {
 				return nil, "", err
 			}
-			thrift.Includes[incName] = p
-		}
-
-		// Find path for next unparsed include
-		path = ""
-		for _, th := range p.Files {
-			for _, incPath := range th.Includes {
-				if p.Files[incPath] == nil {
-					path = incPath
-					break
-				}
+			thrift.Includes[incName] = includePath
+			if _, ok := p.Files[includePath]; !ok {
+				pathsToParse = append(pathsToParse, includePath)
 			}
 		}
 	}
