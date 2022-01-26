@@ -159,6 +159,9 @@ Grammar ← _ statements:( Statement )* __ (EOF / SyntaxError) {
 			if ix := strings.LastIndex(name, "."); ix > 0 {
 				name = name[:ix]
 			}
+			if duplicate, ok := thrift.Includes[name]; ok {
+				return nil, fmt.Errorf("Found conflicting includes: %s and %s", string(v), duplicate)
+			}
 			thrift.Includes[name] = string(v)
 		default:
 			return nil, fmt.Errorf("parser: unknown value %#v", v)

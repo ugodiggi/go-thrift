@@ -577,6 +577,26 @@ func TestParseFiles(t *testing.T) {
 	}
 }
 
+func TestErrorOnConflictingIncludes(t *testing.T) {
+	// Currently it's impossible to include two files with the same filename (but different path)
+	// in a thrift file.
+	_, err := parse(`
+    include "a/b/duplicate.thrift"
+		include "c/d/duplicate.thrift"
+
+		struct Foo {
+		  1: double f0;
+			2: string f1;
+		}
+	`)
+	if err == nil {
+		t.Fatalf("Failed to detect conflicting includes.")
+	}
+	if !strings.Contains(err.Error(), "a/b/duplicate.thrift") || !strings.Contains(err.Error(), "c/d/duplicate.thrift") {
+		t.Fatalf("Error [%q] does not mention the conflicting include full path.", err)
+	}
+}
+
 func pprint(v interface{}) string {
 	b, err := json.MarshalIndent(v, "", "    ")
 	if err != nil {
