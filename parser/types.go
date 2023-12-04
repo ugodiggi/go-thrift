@@ -1,21 +1,32 @@
 // Copyright 2012-2015 Samuel Stauffer. All rights reserved.
 // Use of this source code is governed by a 3-clause BSD
 // license that can be found in the LICENSE file.
+//
+// types.go contains the type definition for the types that the parser parses out
+// of the thrift files. It should be read side-by-side with grammar.peg.
+// Look at the Thrift struct for the top-level output of parsing a thrift file.
 
 package parser
 
 import "fmt"
 
+// Pos represents a token position in a file.
 type Pos struct {
 	Line int
 	Col  int
 }
 
+// TemplateInstance contains the reference to the template that this type is an instance of,
+// for types that are instances of a template.
 type TemplateInstance struct {
 	TemplateName string  `json:",omitempty"`
 	TypeArgs     []*Type `json:",omitempty"`
 }
 
+// Type is the thrift type of a piece of data.
+// When parsing, the thrift type of a piece of data (e.g. the type of thrift field, of a method
+// argument or response type, of a constant, ...), will be parsed as a Type object; the definition
+// of a thrift type will be parsed as a specific struct (Typedef, Enum, SEnum, Field, Struct, ...)
 type Type struct {
 	Pos         Pos
 	Name        string        `json:",omitempty"`
@@ -26,6 +37,7 @@ type Type struct {
 	TemplateInstance *TemplateInstance `json:",omitempty"` // If template instance
 }
 
+// Typedef is the definition of a thrift typedef.
 type Typedef struct {
 	*Type
 
@@ -42,11 +54,28 @@ type EnumValue struct {
 	Annotations []*Annotation `json:",omitempty"`
 }
 
+// Enum is the definition of a thrift enum.
 type Enum struct {
 	Pos         Pos
 	Comment     string
 	Name        string
 	Values      map[string]*EnumValue
+	Annotations []*Annotation `json:",omitempty"`
+}
+
+type SEnumValue struct {
+	Pos         Pos
+	Comment     string
+	Value       string
+	Annotations []*Annotation `json:",omitempty"`
+}
+
+// SEnum is the definition of a thrift senum - analogous to an enum, but its value is the string value.
+type SEnum struct {
+	Pos         Pos
+	Comment     string
+	Name        string
+	Values      map[string]*SEnumValue
 	Annotations []*Annotation `json:",omitempty"`
 }
 
@@ -58,6 +87,7 @@ type Constant struct {
 	Value   interface{}
 }
 
+// Field is the definition of a struct's field.
 type Field struct {
 	Pos         Pos
 	Comment     string
@@ -69,6 +99,7 @@ type Field struct {
 	Annotations []*Annotation `json:",omitempty"`
 }
 
+// Struct is the definition of a thrift struct.
 type Struct struct {
 	Pos         Pos
 	Comment     string
@@ -77,12 +108,14 @@ type Struct struct {
 	Annotations []*Annotation `json:",omitempty"`
 }
 
+// TemplateDef is the definition of a templated thrift struct.
 type TemplateDef struct {
 	Struct
 
 	TypeArgNames []string `json:",omitempty"`
 }
 
+// Method is the definition of a thrift method.
 type Method struct {
 	Pos         Pos
 	Comment     string
@@ -94,6 +127,7 @@ type Method struct {
 	Annotations []*Annotation `json:",omitempty"`
 }
 
+// Service is the definition of a thrift service.
 type Service struct {
 	Pos         Pos
 	Comment     string
@@ -103,6 +137,7 @@ type Service struct {
 	Annotations []*Annotation `json:",omitempty"`
 }
 
+// Thrift is the output of parsing a whole thrift file.
 type Thrift struct {
 	Filename     string
 	Includes     map[string]string       `json:",omitempty"` // name -> unique identifier (absolute path generally)
@@ -111,6 +146,7 @@ type Thrift struct {
 	Namespaces   map[string]string       `json:",omitempty"`
 	Constants    map[string]*Constant    `json:",omitempty"`
 	Enums        map[string]*Enum        `json:",omitempty"`
+	SEnums       map[string]*SEnum       `json:",omitempty"`
 	Structs      map[string]*Struct      `json:",omitempty"`
 	Exceptions   map[string]*Struct      `json:",omitempty"`
 	Unions       map[string]*Struct      `json:",omitempty"`

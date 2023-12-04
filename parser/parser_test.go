@@ -86,9 +86,9 @@ func TestServiceParsing(t *testing.T) {
 			SUBTRACT = 2
 		}
 
-		enum NoNewLineBeforeBrace {
-			ADD = 1,
-			SUBTRACT = 2
+		senum NoNewLineBeforeBrace {
+			ADD,
+			SUBTRACT
 		}
 
 		service ServiceNAME extends SomeBase
@@ -372,42 +372,39 @@ typedef set<string> (a1 = "v1") setT (a2="v2")
 	}
 }
 
-func TestParseEnumAnnotations(t *testing.T) {
+func TestParseSEnumAnnotations(t *testing.T) {
 	thrift, err := parse(`
-		enum E {
+		senum E {
 			ONE (a1="v1"),
-			TWO = 2 (a2 = "v2"),
+			TWO (a2 = "v2"),
 			THREE (a3 = "v3")
 		} (a4 = "v4")
 	`)
 	if err != nil {
-		t.Fatalf("Parse enum annotations failed: %v", err)
+		t.Fatalf("Parse senum annotations failed: %v", err)
 	}
 
-	expected := map[string]*Enum{
-		"E": &Enum{
+	expected := map[string]*SEnum{
+		"E": &SEnum{
 			Name: "E",
-			Values: map[string]*EnumValue{
-				"ONE": &EnumValue{
-					Name:        "ONE",
-					Value:       0,
+			Values: map[string]*SEnumValue{
+				"ONE": &SEnumValue{
+					Value:       "ONE",
 					Annotations: []*Annotation{{Name: "a1", Value: "v1"}},
 				},
-				"TWO": &EnumValue{
-					Name:        "TWO",
-					Value:       2,
+				"TWO": &SEnumValue{
+					Value:       "TWO",
 					Annotations: []*Annotation{{Name: "a2", Value: "v2"}},
 				},
-				"THREE": &EnumValue{
-					Name:        "THREE",
-					Value:       3,
+				"THREE": &SEnumValue{
+					Value:       "THREE",
 					Annotations: []*Annotation{{Name: "a3", Value: "v3"}},
 				},
 			},
 			Annotations: []*Annotation{{Name: "a4", Value: "v4"}},
 		},
 	}
-	if got := thrift.Enums; !reflect.DeepEqual(expected, got) {
+	if got := thrift.SEnums; !reflect.DeepEqual(expected, got) {
 		t.Errorf("Unexpected annotation parsing got\n%s\n instead of\n%v", pprint(got), pprint(expected))
 	}
 }

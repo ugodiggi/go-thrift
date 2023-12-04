@@ -127,6 +127,7 @@ Grammar ← _ statements:( Statement )* __ (EOF / SyntaxError) {
 		Typedefs: make(map[string]*Typedef),
 		Constants: make(map[string]*Constant),
 		Enums: make(map[string]*Enum),
+		SEnums: make(map[string]*SEnum),
 		Structs: make(map[string]*Struct),
 		Exceptions: make(map[string]*Struct),
 		Unions: make(map[string]*Struct),
@@ -142,6 +143,8 @@ Grammar ← _ statements:( Statement )* __ (EOF / SyntaxError) {
 			thrift.Constants[v.Name] = v
 		case *Enum:
 			thrift.Enums[v.Name] = v
+		case *SEnum:
+			thrift.SEnums[v.Name] = v
 		case *Typedef:
 			thrift.Typedefs[v.Alias] = v
 		case *Struct:
@@ -178,7 +181,7 @@ Include ← blockComment:(_ Comment? EOL)* _ "include" _ file:Literal (Whitespac
 	return include(file.(string)), nil
 }
 
-Statement ← Include / Namespace / Const / Enum / TypeDef / TemplateDef / Struct / Exception / Union / Service
+Statement ← Include / Namespace / Const / Enum / SEnum / TypeDef / TemplateDef / Struct / Exception / Union / Service
 
 Namespace ← blockComment:(_ Comment? EOL)* _ "namespace" _ scope:[*a-z.-]+ _ ns:Identifier (Whitespace / EOL)* {
 	return &namespace{
@@ -259,6 +262,46 @@ EnumValue ← blockComment:(_ Comment? EOL)* _ name:Identifier _ value:('=' _ In
 	return ev, nil
 }
 
+SEnum ← blockComment:(_ Comment? EOL)* _ "senum" _ name:Identifier __ '{' (Whitespace / EOL)* values:SEnumValue* __'}' _ annotations:TypeAnnotations? ListSeparator? (Whitespace / EOL)* {
+	vs := toIfaceSlice(values)
+	en := &SEnum{
+		Pos: makePos(c.pos),
+		Name: string(name.(Identifier)),
+		Values: make(map[string]*SEnumValue, len(vs)),
+		Annotations: toAnnotations(annotations),
+	}
+	for _, v := range vs {
+		ev := v.(*SEnumValue)
+		en.Values[ev.Value] = ev
+	}
+	if blockComment != nil {
+		bc := ifaceSliceToBlockComment(blockComment)
+		if bc != "" {
+			en.Comment = bc
+		}
+	}
+	return en, nil
+}
+
+SEnumValue ← blockComment:(_ Comment? EOL)* _ value:Identifier _ annotations:TypeAnnotations? ListSeparator? _ comment:Comment? {
+	fmt.Println(value)
+	ev := &SEnumValue{
+		Pos: makePos(c.pos),
+		Value: string(value.(Identifier)),
+		Annotations: toAnnotations(annotations),
+	}
+	if comment != nil {
+		ev.Comment = ifaceSliceToCommentString(comment)
+	}
+	if blockComment != nil {
+		bc := ifaceSliceToBlockComment(blockComment)
+		if bc != "" {
+			ev.Comment = bc
+		}
+	}
+	return ev, nil
+}
+
 TypeDef ← blockComment:(_ Comment? EOL)* _ "typedef" _ typ:FieldType _ name:Identifier _ annotations:TypeAnnotations? ListSeparator? (Whitespace / EOL)* {
 	return &Typedef{
 		Pos: makePos(c.pos),
@@ -277,17 +320,6 @@ Struct ← blockComment:(_ Comment? EOL)* _ "struct" _ st:StructLike {
 		}
 	}
 	return stc, nil
-}
-
-TemplateDef ← blockComment:(_ Comment? EOL)* _ "template" _ st:TemplateDefBody {
-	td := st.(*TemplateDef)
-	if blockComment != nil {
-		bc := ifaceSliceToBlockComment(blockComment)
-		if bc != "" {
-			td.Comment = bc
-		}
-	}
-	return templateDef(td), nil
 }
 
 Exception ← blockComment:(_ Comment? EOL)* _ "exception" _ st:StructLike {
@@ -322,6 +354,17 @@ StructLike ← name:Identifier __ '{' (Whitespace / EOL)* fields:FieldList __'}'
 		st.Fields = fields.([]*Field)
 	}
 	return st, nil
+}
+
+TemplateDef ← blockComment:(_ Comment? EOL)* _ "template" _ st:TemplateDefBody {
+	td := st.(*TemplateDef)
+	if blockComment != nil {
+		bc := ifaceSliceToBlockComment(blockComment)
+		if bc != "" {
+			td.Comment = bc
+		}
+	}
+	return templateDef(td), nil
 }
 
 TemplateDefBody ← name:Identifier __ "<" args:TemplateDefArgs ">" __ '{' (Whitespace / EOL)* fields:FieldList __'}' _ annotations:TypeAnnotations? ListSeparator? (Whitespace / EOL)* {
